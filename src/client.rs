@@ -1,8 +1,8 @@
+use rand::Rng;
 use std::time::Duration;
+use std::time::Instant;
 use tokio::time::sleep;
-use usdt::UniqueId;
 
-use crate::probes;
 use crate::{data_processor::DataProcessor, network::Network};
 
 pub struct Client<'a> {
@@ -18,16 +18,17 @@ impl<'a> Client<'a> {
     pub async fn go(&self) {
         // Forever...
         loop {
-            // Generate an id simply to correlate start and done probes.
-            let id = UniqueId::new();
-            probes::request__start!(|| &id);
+            // Generate a random request ID
+            let id = rand::thread_rng().gen();
+            let now = Instant::now();
+            println!("sending request {id}");
             // Send the request over the network.
             self.network.traverse().await;
             // Make a request to the server.
-            self.server.request(&id).await;
+            self.server.request(id).await;
             // Return the response over the network.
             self.network.traverse().await;
-            probes::request__done!(|| &id);
+            println!("finished request {id} in {:?}", now.elapsed());
 
             // Pause for a second.
             sleep(Duration::from_secs(1)).await;

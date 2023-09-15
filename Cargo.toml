@@ -5,7 +5,6 @@ authors = ["Adam H. Leventhal <ahl@oxide.computer>"]
 edition = "2021"
 
 [dependencies]
-usdt = "0.3.5"
 rand_distr = "0.4.3"
 rand = "0.8.5"
 tokio = { version = "1.32.0", features = ["full"] }
