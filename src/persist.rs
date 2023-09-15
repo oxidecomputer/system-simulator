@@ -1,4 +1,5 @@
 use futures::Future;
+use log::debug;
 use rand_distr::{Distribution, Normal};
 use std::time::Instant;
 use std::{sync::Arc, time::Duration};
@@ -23,7 +24,7 @@ impl Persist {
 
     pub fn enqueue(&self, id: u64, handler: impl Future + Send + 'static) {
         let now = Instant::now();
-        println!("starting persistence for job {id}");
+        debug!("starting persistence, id = {}", id);
         // This will panic if there are no leases available and this is by
         // design.
         self.sem.try_acquire().unwrap().forget();
@@ -34,9 +35,13 @@ impl Persist {
         // and then call the completion handler.
         tokio::task::spawn(async move {
             tokio::time::sleep(delta).await;
-            println!("finished persistence for job {id} in {:?}", now.elapsed());
             sem.add_permits(1);
             handler.await;
+            debug!(
+                "finished persistence, id = {}, duration = {:?}",
+                id,
+                now.elapsed()
+            );
         });
     }
 }

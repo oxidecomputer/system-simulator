@@ -1,3 +1,4 @@
+use log::debug;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -29,11 +30,11 @@ impl DataProcessor {
         // non-blocking request for the semaphore.
         match sem.try_acquire() {
             Ok(s) => {
-                println!("request {id} is non-blocking");
+                debug!("request is non-blocking, id = {}", id);
                 s
             }
             Err(_) => {
-                println!("request {id} is blocking");
+                debug!("request is blocking, id = {}", id);
                 sem.acquire().await.unwrap()
             }
         }

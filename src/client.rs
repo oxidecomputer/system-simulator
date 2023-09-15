@@ -1,3 +1,4 @@
+use log::info;
 use rand::Rng;
 use std::time::Duration;
 use std::time::Instant;
@@ -21,14 +22,18 @@ impl<'a> Client<'a> {
             // Generate a random request ID
             let id = rand::thread_rng().gen();
             let now = Instant::now();
-            println!("sending request {id}");
+            info!("sending request, id = {}", id);
             // Send the request over the network.
             self.network.traverse().await;
             // Make a request to the server.
             self.server.request(id).await;
             // Return the response over the network.
             self.network.traverse().await;
-            println!("finished request {id} in {:?}", now.elapsed());
+            info!(
+                "finished request, id = {}, duration = {:?}",
+                id,
+                now.elapsed()
+            );
 
             // Pause for a second.
             sleep(Duration::from_secs(1)).await;

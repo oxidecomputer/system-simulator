@@ -1,6 +1,7 @@
 use client::Client;
 use data_processor::DataProcessor;
 use futures::future::join_all;
+use log::info;
 use network::Network;
 
 mod client;
@@ -10,7 +11,8 @@ mod persist;
 
 #[tokio::main]
 async fn main() {
-    println!("System simulation running...");
+    env_logger::init();
+    info!("System simulation running...");
 
     let network = Network::new();
     let server = DataProcessor::new();
