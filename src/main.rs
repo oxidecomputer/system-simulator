@@ -1,13 +1,17 @@
-#![feature(asm)]
-
-use futures::future::join_all;
-use usdt::dtrace_provider;
-
 use client::Client;
 use data_processor::DataProcessor;
+use futures::future::join_all;
 use network::Network;
 
-dtrace_provider!("src/isim.d");
+#[usdt::provider(provider = "isim")]
+mod probes {
+    fn request__start(_: &UniqueId) {}
+    fn request__done(_: &UniqueId) {}
+    fn persist__start(_: &UniqueId) {}
+    fn persist__done(_: &UniqueId) {}
+    fn request__block(_: &UniqueId) {}
+    fn request__nonblock(_: &UniqueId) {}
+}
 
 mod client;
 mod data_processor;
@@ -16,6 +20,7 @@ mod persist;
 
 #[tokio::main]
 async fn main() {
+    usdt::register_probes().expect("Failed to register probes");
     println!("System simulation running...");
 
     let network = Network::new();

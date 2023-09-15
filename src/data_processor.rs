@@ -1,29 +1,22 @@
-use std::sync::{
-    atomic::{AtomicU64, Ordering},
-    Arc,
-};
+use std::sync::Arc;
 use tokio::sync::Semaphore;
+use usdt::UniqueId;
 
 use crate::persist::{Persist, PERSIST_N};
+use crate::probes;
 
 pub struct DataProcessor {
     sem: Arc<Semaphore>,
-    id: AtomicU64,
     persist: Persist,
 }
 impl DataProcessor {
     pub fn new() -> Self {
-        let persist = Persist::new();
-
-        let ret = Self {
+        Self {
             sem: Arc::new(Semaphore::new(PERSIST_N)),
-            id: AtomicU64::new(5),
-            persist,
-        };
-
-        ret
+            persist: Persist::new(),
+        }
     }
-    pub async fn request(&self, id: u64) {
+    pub async fn request(&self, id: &UniqueId) {
         // Wait until we can be sure we have a slot available in the persistent
         // store i.e. that the enqueue will succeed. We eliminate the
         // reservation and restore it when the transaction is complete.
@@ -34,22 +27,22 @@ impl DataProcessor {
         // non-blocking request for the semaphore.
         match sem.try_acquire() {
             Ok(s) => {
-                isim_request__nonblock!(|| id);
+                probes::request__nonblock!(|| id);
                 s
             }
             Err(_) => {
-                isim_request__block!(|| id);
+                probes::request__block!(|| id);
                 sem.acquire().await.unwrap()
             }
         }
         .forget();
 
-        // Incrememt the id.
-        let id = self.id.fetch_add(1, Ordering::SeqCst);
+        // Create a new ID for the enqueued work.
+        let new_id = UniqueId::new();
 
         // Enqueue the transaction with the persistent store.
         let sem = self.sem.clone();
-        self.persist.enqueue(id, async move {
+        self.persist.enqueue(new_id, async move {
             sem.add_permits(1);
         });
 

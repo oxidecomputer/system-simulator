@@ -1,9 +1,9 @@
+use crate::probes;
 use futures::Future;
 use rand_distr::{Distribution, Normal};
 use std::{sync::Arc, time::Duration};
 use tokio::sync::Semaphore;
-
-pub type PersistIdent = u64;
+use usdt::UniqueId;
 
 // The persistent store can handle at most `PERSIST_N` concurrent operations.
 // More than that will cause a panic.
@@ -22,8 +22,8 @@ impl Persist {
         }
     }
 
-    pub fn enqueue(&self, id: PersistIdent, handler: impl Future + Send + 'static) {
-        isim_persist__start!(|| id);
+    pub fn enqueue(&self, id: UniqueId, handler: impl Future + Send + 'static) {
+        probes::persist__start!(|| &id);
         // This will panic if there are no leases available and this is by
         // design.
         self.sem.try_acquire().unwrap().forget();
@@ -34,7 +34,7 @@ impl Persist {
         // and then call the completion handler.
         tokio::task::spawn(async move {
             tokio::time::sleep(delta).await;
-            isim_persist__done!(|| id);
+            probes::persist__done!(|| &id);
             sem.add_permits(1);
             handler.await;
         });
